@@ -92,7 +92,7 @@ class IPLookup:
                   'Block Length': str(block_result.size)}
 
         # Iterate over each IP and grab the IPs info and add to our result dict.
-        result.update({str(ip): self.get_ip(str(ip)) for ip in block_result})
+        result.update({'IPs': [{str(ip): self.get_ip(str(ip)) for ip in block_result}]})
 
         if with_json:
             result = json.dumps(result)
