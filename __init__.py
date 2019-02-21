@@ -18,7 +18,20 @@ class IPLookup:
         self.names_text = 'names'
         self.lang = 'en'
 
-    def _override_names(self, lookup_result):
+    def _replace_names(self, section):
+        if self.names_text in section.keys():
+            try:
+                section.update({'name': section[self.names_text][self.lang]})
+            except KeyError:
+                # Catches the potential key error if the en key doesnt exist and updates the dict to have an
+                # empty name value
+                section.update({'name': 'No English name found.'})
+                # Removes old names key from dict.
+            section.pop(self.names_text, None)
+
+        return section
+
+    def _convert_result(self, lookup_result):
         """
         Checks previously defined sections of the nested dict structure for a names field and overrides it with just
         the english name if it can find one.
@@ -26,17 +39,13 @@ class IPLookup:
 
         for section in self.override_sections:
             # If the section exists as a key and has a names key underneath, update the dict with just english name.
-            if lookup_result[section] and isinstance(lookup_result[section], dict):
-                if self.names_text in lookup_result[section].keys():
-                    try:
-                        lookup_result[section].update({'name': lookup_result[section][self.names_text][self.lang]})
-                    except KeyError:
-                        # Catches the potential key error if the en key doesnt exist and updates the dict to have an
-                        # empty name value
-                        lookup_result[section].update({'name': 'No English name found.'})
-                        # Removes old names key from dict.
-                    lookup_result[section].pop(self.names_text, None)
-
+            if section in lookup_result:
+                if isinstance(lookup_result[section], list):
+                    for index, item in enumerate(lookup_result[section]):
+                        if isinstance(item, dict):
+                            lookup_result[section][index] = self._replace_names(item)
+                elif isinstance(lookup_result[section], dict):
+                    lookup_result[section] = self._replace_names(lookup_result[section])
         return lookup_result
 
     def get_ip(self, ip, with_json=False):
@@ -54,7 +63,7 @@ class IPLookup:
         initial_output = self.reader.get(ip)
         # Attempt to mutate the output with private method. Dont fail if it doesnt succeed though.
         # noinspection PyBroadException
-        result = self._override_names(initial_output)
+        result = self._convert_result(initial_output)
 
         if with_json:
             return json.dumps(result)
